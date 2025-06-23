@@ -182,13 +182,169 @@ return res
 });
 
 const getUserInfo = asyncHandler(async(req,res)=>{
+
+    const user = await User.findById(req.user._id).select("-password -refreshToken");
+
+    if(!user){
+        throw new ApiError(400,"user not found");
+    }
+
+
     return res
     .status(200)
     .json(
 
-        new ApiResponse(200,req.user,"user details fetched successfully")
+        new ApiResponse(200,user,"user details fetched successfully")
     );
 })
 
+const updateAccountdeatils =asyncHandler(async(req,res)=>{
 
-export {registerUser, loginUser, refreshAccessToken,logoutUser,getUserInfo};
+    const {name,email} = req.body;
+
+    if(!name || !email){
+        throw new ApiError(400, "all fields are required");
+    }
+
+    User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set:{
+                name,email
+            }
+        },
+        {
+            new:true,
+        }
+    ).select("-password")
+
+    return res.
+    status(200)
+    .json(
+        new ApiResponse(200,req.user,"user details updated successfully")
+    )
+})
+
+const getUserByname = asyncHandler(async(req,res)=>{
+
+    const {name} = req.body ;
+
+    if(!name){
+        throw new ApiError(400, "name is required");
+    }
+
+    const user = await User.findOne({name}).select("-password -refreshToken") 
+
+    if(!user){
+        throw new ApiError(404,"user not found");
+    }
+
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200,user,"user details fetched successfully")
+    )
+})
+
+const updateUserProfile = asyncHandler(async(req,res)=>{
+
+    
+    const {bio, skills,githubUsername, avatar} = req.body;
+
+    if(!bio && !skills && !githubUsername && !avatar){
+        throw new ApiError(400,"please provide at least one field to update");
+    }
+
+    const updates = {};
+    if(bio) updates.bio = bio;
+    if(skills) updates.skills = skills;
+    if(githubUsername) updates.githubUsername = githubUsername;
+    if(avatar) updates.avatar = avatar;
+    
+    const updatedUser = await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set:
+                updates
+            
+        },
+        {new:true}
+    ).select("-password -refreshToken")
+
+    return res
+    .status(200)
+    .json(200,updatedUser,"user details updated successfully")
+})
+
+const followUser = asyncHandler(async (req, res) => {
+  const followeeId = req.params.id;
+  const followerId = req.user._id;
+
+  if (followerId.toString() === followeeId) {
+    throw new ApiError(400, "You can't follow yourself");
+  }
+
+  const followerUser = await User.findById(followerId);
+  const followeeUser = await User.findById(followeeId);
+
+  if (!followerUser || !followeeUser) {
+    throw new ApiError(404, "User not found");
+  }
+
+
+  // Add followerId to followee's followers array
+  await User.findByIdAndUpdate(followeeId, {
+    $addToSet: { followers: followerId },
+  });
+
+  // Add followeeId to follower's following array
+  await User.findByIdAndUpdate(followerId, {
+    $addToSet: { following: followeeId },
+  });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, null, "Followed user successfully"));
+});
+
+const unfollowUser = asyncHandler(async(req,res)=>{
+
+    const followerId=req.user._id;
+    const followeeId = req.params.id;
+
+    if(followerId.toString() === followeeId){
+        throw new ApiError(400,"you can't unfollow yourself")
+    }
+    const followerUser = await User.findById(
+        followerId
+    );
+    const followeeUser = await User.findById(
+        followeId
+    );
+
+    if(!followerUser || followeeUser){
+        throw new ApiError(404,"user not found");
+    }
+
+    await User.findByIdAndUpdate(followeeId,{
+        $pull:{
+            followers:followerId
+        },
+    })
+
+    await User.findByIdAndUpdate(followerId,
+        {
+           $pull:{ following:followeeId}
+        }
+    )
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200,null,"user unfollowed successfully")
+    );
+
+
+})
+export {registerUser, loginUser, refreshAccessToken,logoutUser,getUserInfo,getUserByname,updateUserProfile,followUser};
