@@ -2,6 +2,7 @@ import {User} from '../models/user.model.js';
 import {asyncHandler} from '../utils/asyncHandler.js';
 import {ApiError} from '../utils/apiError.js';
 import {ApiResponse} from "../utils/apiResponse.js"
+import {uploadOnCloudinary} from "../utils/uploadImage.js"
 import jwt from 'jsonwebtoken';
 
 // function to register a new user
@@ -20,7 +21,22 @@ const registerUser =asyncHandler(async(req,res)=>{
     if(userExists){
         throw new ApiError(400,"User already exists with this email or username");
     }
+
+
     console.log("user does not exist, creating new user");
+    
+    const avatarLocalpath=req.files?.avatar[0]?.path;
+
+    if(!avatarLocalpath){
+        throw new ApiError(400,"avatar file is required");
+    }
+    
+    const avatar= await uploadOnCloudinary(avatarLocalpath);
+
+    if(!avatar){
+        throw new ApiError(400,"avatar upload failed");
+    }
+    
     const user = await User.create({
         name,
         email,
@@ -347,4 +363,4 @@ const unfollowUser = asyncHandler(async(req,res)=>{
 
 
 })
-export {registerUser, loginUser, refreshAccessToken,logoutUser,getUserInfo,getUserByname,updateUserProfile,followUser};
+export {registerUser, loginUser, refreshAccessToken,logoutUser,getUserInfo,getUserByname,updateUserProfile,followUser,unfollowUser};
