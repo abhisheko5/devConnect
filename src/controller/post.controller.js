@@ -3,6 +3,7 @@ import {asyncHandler} from '../utils/asyncHandler.js';
 import {ApiError} from '../utils/apiError.js';
 import {ApiResponse} from "../utils/apiResponse.js"
 import {uploadOnCloudinary} from "../utils/uploadImage.js"
+import {User} from "../models/user.model.js"
 
 
 
@@ -40,6 +41,58 @@ const createPost = asyncHandler(async(req,res)=>{
         new ApiResponse(201,userPost,"user posted successfully")
     );
 
+
+})
+
+const deletePost = asyncHandler(async(req,res)=>{
+    const postId = req.params.id;
+    const userId = req.user._id;
+
+    const post = await Post.findById(postId);
+    
+    if(!post){
+        throw new ApiError(404,"post not found");
+    }
+
+    if(post.author.toString()!==userId.toString()){
+        throw new ApiError(404,"not allowed");
+    }
+
+    const postToDelete = await Post.findByIdAndDelete(postId);
+
+    if(!postToDelete){
+        throw new apiError(400,"delete failed");
+    }
+
+
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200,null,"post deleted  successfully")
+   )
+})
+
+const getUserPosts = asyncHandler(async(req,res)=>{
+
+    const userId= req.params.id;
+
+    const user = await User.findById(userId);
+
+    if(!user){
+        throw new ApiError(400,"user not found");
+    }
+
+    const posts = await Post.find({author : userId})
+    .populate("author", " name avatar")
+    .sort({createdAt: -1});
+
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200,posts,"all posts fetched successfully")
+    );
 
 })
 
@@ -125,9 +178,58 @@ const comment = asyncHandler(async(req,res)=>{
         {new: true}
     );
 
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200,post, "commented succesfully")
+    );
+})
 
+const deleteComment = asyncHandler(async(req,res)=>{
+
+    const postId = req.params.id;
+    const userid = req.user._id;
+
+    const  post = await Post.findById(postId);
+
+    if(!post){
+        throw new ApiError(400,"post not available")
+    }
+    const comment = await Post.findByIdAndUpdate({postId,
+        $pull:{
+            comment:{
+                user: userId,
+                text : commentext,
+            }
+        }
+    })
+
+
+    
 
 
 
 })
-export {createPost,getallPosts,likeandunlikePost,comment};
+
+const singlePost = asyncHandler(async(req,res)=>{
+    const postId= req.params.id
+
+    const post= await Post.findById(postId);
+
+    if(!post){
+        throw new ApiError(400,"post not found");
+    }
+
+    post
+    .populate("author"," name avatar")
+    .populate("comments.commenter","name avatar")
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200,post,"single post details fetched")
+    );
+
+})
+
+export {createPost,getallPosts,likeandunlikePost,comment,deletePost,getUserPosts,singlePost};

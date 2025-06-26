@@ -1,6 +1,6 @@
 import express from "express";
 import {authMiddleware} from '../middleware/auth.middleware.js';
-import {createPost,getallPosts,likeandunlikePost,comment} from "../controller/post.controller.js"
+import {createPost,getallPosts,likeandunlikePost,comment,deletePost,getUserPosts,singlePost} from "../controller/post.controller.js"
 import {upload} from "../middleware/multer.middleware.js";
 
 const router =express.Router();
@@ -16,5 +16,12 @@ router.route('/post').post(authMiddleware,
 router.route('/all-posts').get(authMiddleware,getallPosts)
 router.route('/:id/like-unlike-post').post(authMiddleware,likeandunlikePost);
 
-router.route('/comment').post(authMiddleware,comment);
+router.route('/:id/comment').post(authMiddleware,comment);
+
+router.route('/:id/delete-post').post(authMiddleware,deletePost);
+
+router.route('/:id/user-posts').get(authMiddleware,getUserPosts);
+
+router.route('/:id/detailed-post').get(authMiddleware,singlePost);
+
 export default router;
