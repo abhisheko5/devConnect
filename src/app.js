@@ -8,6 +8,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 import userRoutes from './routes/user.route.js';
+import postRoutes from './routes/post.route.js';
 
 app.use('/api/users', userRoutes);
+app.use('/api/post', postRoutes);
+
 export default app;

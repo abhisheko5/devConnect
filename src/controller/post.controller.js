@@ -97,4 +97,37 @@ const likeandunlikePost = asyncHandler(async(req,res)=>{
 
 
 })
-export {createPost,getallPosts,likeandunlikePost};
+
+const comment = asyncHandler(async(req,res)=>{
+
+    const postId= req.params.id;
+    const userId = req.user._id;
+    const comment = req.body.text;
+
+    if(!comment){
+        throw new ApiError(400,"please enter text to comment");
+    }
+
+
+    const post = await Post.findById(postId);
+
+    await Post.findByIdAndUpdate(postId,
+        {
+            $push:{
+                comments:{
+                    
+                    text:comment,
+                    author: userId,
+                    createdAt:new Date(),
+                },
+            },
+        },
+        {new: true}
+    );
+
+
+
+
+
+})
+export {createPost,getallPosts,likeandunlikePost,comment};
