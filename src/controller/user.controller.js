@@ -25,22 +25,24 @@ const registerUser =asyncHandler(async(req,res)=>{
 
     console.log("user does not exist, creating new user");
     
-    const avatarLocalpath=req.files?.avatar[0]?.path;
+    const avatarLocalpath=req.files?.avatar[0]?.path ;
 
-    if(!avatarLocalpath){
-        throw new ApiError(400,"avatar file is required");
+    if(avatarLocalpath){
+        const avatar= await uploadOnCloudinary(avatarLocalpath);
+        if(!avatar){
+        throw new ApiError(400,"avatar upload failed");
+    }
     }
     
     const avatar= await uploadOnCloudinary(avatarLocalpath);
 
-    if(!avatar){
-        throw new ApiError(400,"avatar upload failed");
-    }
+    
     
     const user = await User.create({
         name,
         email,
-        password
+        password,
+        avatar
     })
     console.log("user created successfully", user);
 
@@ -241,25 +243,26 @@ const updateAccountdeatils =asyncHandler(async(req,res)=>{
     )
 })
 
-const getUserByname = asyncHandler(async(req,res)=>{
+const searchUserByname = asyncHandler(async(req,res)=>{
 
-    const {name} = req.body ;
+    const {name} = req.query;
 
     if(!name){
-        throw new ApiError(400, "name is required");
+        throw new ApiError(400, "please enter username ");
     }
 
-    const user = await User.findOne({name}).select("-password -refreshToken") 
+    const user = await User.find({
+        name:{ $regex:name, $options:"i"}
+    }).select("-password -refreshToken"); 
 
-    if(!user){
-        throw new ApiError(404,"user not found");
+    if(!user.length){
+        throw new ApiError(404,"no matching user found");
     }
-
 
     return res
     .status(200)
     .json(
-        new ApiResponse(200,user,"user details fetched successfully")
+        new ApiResponse(200,user,"matching fetched successfully")
     )
 })
 
@@ -290,8 +293,10 @@ const updateUserProfile = asyncHandler(async(req,res)=>{
 
     return res
     .status(200)
-    .json(200,updatedUser,"user details updated successfully")
-})
+    .json(
+        new ApiResponse(200,updatedUser,"user details updated successfully")
+    )
+});
 
 const followUser = asyncHandler(async (req, res) => {
   const followeeId = req.params.id;
@@ -336,10 +341,10 @@ const unfollowUser = asyncHandler(async(req,res)=>{
         followerId
     );
     const followeeUser = await User.findById(
-        followeId
+        followeeId
     );
 
-    if(!followerUser || followeeUser){
+    if(!followerUser || !followeeUser){
         throw new ApiError(404,"user not found");
     }
 
@@ -363,4 +368,5 @@ const unfollowUser = asyncHandler(async(req,res)=>{
 
 
 })
-export {registerUser, loginUser, refreshAccessToken,logoutUser,getUserInfo,getUserByname,updateUserProfile,followUser,unfollowUser};
+
+export {registerUser, loginUser, refreshAccessToken,logoutUser,getUserInfo,searchUserByname,updateUserProfile,followUser,unfollowUser};

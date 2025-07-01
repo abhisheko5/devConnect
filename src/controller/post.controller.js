@@ -9,7 +9,7 @@ import {User} from "../models/user.model.js"
 
 const createPost = asyncHandler(async(req,res)=>{
 
-    const{caption , image} =req.body;
+    const{caption , image,tags} =req.body;
     if(!caption && !image){
         throw new ApiError(400,"please provide either caption or image")
     }
@@ -32,6 +32,7 @@ const createPost = asyncHandler(async(req,res)=>{
         caption,
         image:Image.url,
         author:req.user._id,
+        tags,
 
     })
 
@@ -75,6 +76,10 @@ const deletePost = asyncHandler(async(req,res)=>{
 
 const getUserPosts = asyncHandler(async(req,res)=>{
 
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
     const userId= req.params.id;
 
     const user = await User.findById(userId);
@@ -84,6 +89,8 @@ const getUserPosts = asyncHandler(async(req,res)=>{
     }
 
     const posts = await Post.find({author : userId})
+    .skip(skip)
+    .limit(limit)
     .populate("author", " name avatar")
     .sort({createdAt: -1});
 
@@ -97,15 +104,24 @@ const getUserPosts = asyncHandler(async(req,res)=>{
 })
 
 const getallPosts= asyncHandler(async(req,res)=>{
+   
+   const page = parseInt(req.query.page) || 1;
+   const limit = parseInt(req.query.limit) || 10;
+   const skip = (page - 1) * limit;
+
+   
     const Posts= await Post.find({})
+    .skip(skip)
+    .limit()
     .populate("author","name avatar")
     .sort({createdAt: -1})
+    
 
     return res
     .status(200)
     .json(
         new ApiResponse(200,Posts,"all posts fetched successfully")
-    )
+    );
 
 })
 
@@ -232,4 +248,53 @@ const singlePost = asyncHandler(async(req,res)=>{
 
 })
 
-export {createPost,getallPosts,likeandunlikePost,comment,deletePost,getUserPosts,singlePost};
+const searchpostbytag = asyncHandler(async(req,res)=>{
+    const query =req.query.query;
+
+    if(!query){
+        throw new ApiError(400,"please provide a tag");
+    }
+
+    const posts = await Post.find({
+        $or:[
+            {caption:{$regex:query, $options:"i"}},
+            {tags:{$in:[query]}}
+
+        ]
+
+    
+    })
+    .populate("author", "name avatar")
+    .sort({createdAt:-1});
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200,posts,`Found ${posts.length} post(s) matching "${query}"`)
+    );
+});
+
+const trendingtag = asyncHandler(async(req,res)=>{
+
+    const posts = await Post.aggregate([
+        {$unwind:"$tags" },
+        {
+            $group:{
+                _id:"$tags",count:{$sum:1}
+            }
+        },
+    {$sort:{count:-1}},
+    {$limit:10}]
+    )
+
+
+return res
+.status(200)
+.json( 
+    new ApiResponse(200,tags,"trending tags fetched successfully")
+)
+});
+
+export {createPost,getallPosts,likeandunlikePost,comment,deletePost,getUserPosts,singlePost
+    ,searchpostbytag,trendingtag
+};

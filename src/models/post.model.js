@@ -23,7 +23,7 @@ const postSchema = new mongoose.Schema({
 
     comments:[{
         text:{
-            type:String ,
+            type:String,
             required:true
         },
         author:{
@@ -34,12 +34,16 @@ const postSchema = new mongoose.Schema({
 
         createdAt:{
             type:Date,
-            default:Date.now
+            default:Date.now,
         }
     }],
 
-    
-
+    tags:{
+        type:[String],
+        default:[],
+        lowercase:true,
+        trim:true
+    }
 },
 {timestamps:true}
 )
